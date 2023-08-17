@@ -837,18 +837,22 @@ pub enum BreakMode {
 }
 impl BreakMode {
     pub fn suppress_writes(self) -> bool {
-        todo!()
+        matches!(self, Self::Rst)
     }
     pub fn increment_pc(self) -> bool {
-        todo!()
+        matches!(self, Self::Brk)
     }
 
     pub fn b_flag(&self) -> bool {
-        todo!()
+        matches!(self, Self::Brk)
     }
 
     pub fn vector(&self) -> u16 {
-        todo!()
+        match self {
+            Self::Nmi => 0xFFFA,
+            Self::Rst => 0xFFFC,
+            Self::Irq | Self::Brk => 0xFFFE,
+        }
     }
 }
 
