@@ -641,28 +641,31 @@ impl Cpu {
     }
 
     fn do_read(&mut self, sync: bool, poll: bool, addr: u16, bus: &mut impl Bus) -> u8 {
-        let mut outputs = Outputs { sync, halt: false };
+        bus.set_halt(false);
         loop {
-            let (val, inputs) = bus.read(outputs, addr);
             if poll {
-                self.poll_interrupts(inputs)
+                self.poll_interrupts(bus)
             };
-            let ready = !inputs.not_ready;
+            bus.set_address(addr);
+            bus.set_sync(sync);
+            bus.set_read(true);
+            bus.cycle(self);
+            let ready = !bus.not_ready();
             if ready {
-                return val;
+                return bus.data();
             }
-            outputs.halt = true;
+            bus.set_halt(true);
         }
     }
     fn do_write(&mut self, poll: bool, addr: u16, val: u8, bus: &mut impl Bus) {
-        let outputs = Outputs {
-            sync: false,
-            halt: false,
-        };
-        let inputs = bus.write(outputs, addr, val);
         if poll {
-            self.poll_interrupts(inputs);
+            self.poll_interrupts(bus);
         }
+        bus.set_halt(false);
+        bus.set_read(false);
+        bus.set_address(addr);
+        bus.set_data(val);
+        bus.cycle(self);
     }
 
     fn push(&mut self, val: u8, bus: &mut impl Bus) {
@@ -703,12 +706,12 @@ impl Cpu {
         self.sp = self.sp.wrapping_add(1);
     }
 
-    fn poll_interrupts(&mut self, inputs: Inputs) {
-        self.meta.set_irq_pending(inputs.irq);
-        let nmi = inputs.nmi && !self.meta.last_nmi();
+    fn poll_interrupts(&mut self, bus: &mut impl Bus) {
+        self.meta.set_irq_pending(bus.irq());
+        let nmi = bus.nmi() && !self.meta.last_nmi();
         self.meta.set_nmi_pending(nmi);
-        self.meta.set_last_nmi(inputs.nmi);
-        self.meta.set_rst_pending(inputs.rst);
+        self.meta.set_last_nmi(bus.nmi());
+        self.meta.set_rst_pending(bus.rst());
     }
 
     pub fn a(&self) -> u8 {
@@ -932,41 +935,20 @@ impl Flags {
     const NEGATIVE: u8 = 7;
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub struct Inputs {
-    pub not_ready: bool,
-    pub irq: bool,
-    pub nmi: bool,
-    pub rst: bool,
-}
-impl Inputs {
-    pub fn merge(self, other: Self) -> Self {
-        Self {
-            not_ready: self.not_ready || other.not_ready,
-            irq: self.irq || other.irq,
-            nmi: self.nmi || other.nmi,
-            rst: self.rst || other.rst,
-        }
-    }
-}
-impl Default for Inputs {
-    fn default() -> Self {
-        Self {
-            not_ready: false,
-            irq: false,
-            nmi: false,
-            rst: false,
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub struct Outputs {
-    pub halt: bool,
-    pub sync: bool,
-}
 
 pub trait Bus {
-    fn read(&mut self, out: Outputs, addr: u16) -> (u8, Inputs);
-    fn write(&mut self, out: Outputs, addr: u16, value: u8) -> Inputs;
+    fn data(&self) -> u8;
+    fn rst(&self) -> bool;
+    fn nmi(&self) -> bool;
+    fn irq(&self) -> bool;
+    fn not_ready(&self) -> bool;
+
+    fn set_data(&mut self, data: u8);
+    fn set_address(&mut self, addr: u16);
+    fn set_read(&mut self, read: bool);
+    fn set_sync(&mut self, sync: bool);
+    fn set_halt(&mut self, halt: bool);
+
+
+    fn cycle(&mut self, cpu: &Cpu);
 }
