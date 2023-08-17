@@ -374,11 +374,11 @@ impl Cpu {
         };
 
         self.write_brk(self.sp(), self.pc_high(), bus);
-        self.increment_sp();
+        self.decrement_sp();
         self.write_brk(self.sp(), self.pc_low(), bus);
-        self.increment_sp();
+        self.decrement_sp();
         self.write_brk(self.sp(), self.flags.to_pushable_bits(mode.b_flag()), bus);
-        self.increment_sp();
+        self.decrement_sp();
 
         let vector = mode.vector();
         let low = self.read_brk(vector, bus);
@@ -670,7 +670,7 @@ impl Cpu {
 
     fn push(&mut self, val: u8, bus: &mut impl Bus) {
         self.write(self.sp(), val, bus);
-        self.increment_sp();
+        self.decrement_sp();
     }
 
     fn read(&mut self, addr: u16, bus: &mut impl Bus) -> u8 {
@@ -701,6 +701,9 @@ impl Cpu {
     }
     fn increment_pc(&mut self) {
         self.pc = self.pc.wrapping_add(1);
+    }
+    fn decrement_sp(&mut self) {
+        self.sp = self.sp.wrapping_sub(1);
     }
     fn increment_sp(&mut self) {
         self.sp = self.sp.wrapping_add(1);
