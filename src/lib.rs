@@ -949,6 +949,16 @@ impl Inputs {
         }
     }
 }
+impl Default for Inputs {
+    fn default() -> Self {
+        Self {
+            not_ready: false,
+            irq: false,
+            nmi: false,
+            rst: false,
+        }
+    }
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct Outputs {
