@@ -939,6 +939,16 @@ pub struct Inputs {
     pub nmi: bool,
     pub rst: bool,
 }
+impl Inputs {
+    pub fn merge(self, other: Self) -> Self {
+        Self {
+            not_ready: self.not_ready || other.not_ready,
+            irq: self.irq || other.irq,
+            nmi: self.nmi || other.nmi,
+            rst: self.rst || other.rst,
+        }
+    }
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct Outputs {
