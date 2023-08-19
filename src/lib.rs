@@ -370,8 +370,9 @@ impl Cpu {
             return;
         };
 
+        let addend = if val >= 128 { -1 } else { 1 };
         self.read(self.pc, bus);
-        let pch = self.pc_high().wrapping_add(1);
+        let pch = self.pc_high().wrapping_add_signed(addend);
         self.pc = u16::from_le_bytes([low, pch]);
     }
     fn exec_brk(&mut self, bus: &mut impl Bus) {
