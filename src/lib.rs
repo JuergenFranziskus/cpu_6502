@@ -260,6 +260,7 @@ impl Cpu {
         use Op::*;
         match self.op {
             ADC => self.exec_adc(val),
+            ANC => self.exec_anc(val),
             AND => self.exec_and(val),
             ASL => self.exec_asl(addr, val, bus),
             BCC => self.exec_branch(!self.flags.carry(), val, bus),
@@ -333,6 +334,12 @@ impl Cpu {
         }
 
         self.do_adc(val);
+    }
+    fn exec_anc(&mut self, val: u8) {
+        self.a &= val;
+        let carry = self.a & 128 != 0;
+        self.set_common_flags(self.a);
+        self.flags.set_carry(carry);
     }
     fn exec_and(&mut self, val: u8) {
         self.a &= val;
@@ -942,7 +949,6 @@ impl Flags {
     const NEGATIVE: u8 = 7;
 }
 
-
 pub trait Bus {
     fn data(&self) -> u8;
     fn rst(&self) -> bool;
@@ -955,7 +961,6 @@ pub trait Bus {
     fn set_read(&mut self, read: bool);
     fn set_sync(&mut self, sync: bool);
     fn set_halt(&mut self, halt: bool);
-
 
     fn cycle(&mut self, cpu: &Cpu);
 }
