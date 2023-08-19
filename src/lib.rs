@@ -649,7 +649,6 @@ impl Cpu {
     }
 
     fn do_read(&mut self, sync: bool, poll: bool, addr: u16, bus: &mut impl Bus) -> u8 {
-        bus.set_halt(false);
         loop {
             if poll {
                 self.poll_interrupts(bus)
@@ -658,12 +657,12 @@ impl Cpu {
             bus.set_address(addr);
             bus.set_sync(sync);
             bus.set_read(true);
+            bus.set_halt(bus.not_ready());
             bus.cycle(self);
             let ready = !bus.not_ready();
             if ready {
                 return bus.data();
             }
-            bus.set_halt(true);
         }
     }
     fn do_write(&mut self, poll: bool, addr: u16, val: u8, bus: &mut impl Bus) {
