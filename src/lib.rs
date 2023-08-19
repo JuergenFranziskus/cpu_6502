@@ -654,6 +654,7 @@ impl Cpu {
             if poll {
                 self.poll_interrupts(bus)
             };
+            self.meta.set_last_nmi(bus.nmi());
             bus.set_address(addr);
             bus.set_sync(sync);
             bus.set_read(true);
@@ -669,6 +670,7 @@ impl Cpu {
         if poll {
             self.poll_interrupts(bus);
         }
+        self.meta.set_last_nmi(bus.nmi());
         bus.set_halt(false);
         bus.set_read(false);
         bus.set_address(addr);
@@ -720,8 +722,9 @@ impl Cpu {
     fn poll_interrupts(&mut self, bus: &mut impl Bus) {
         self.meta.set_irq_pending(bus.irq());
         let nmi = bus.nmi() && !self.meta.last_nmi();
-        self.meta.set_nmi_pending(nmi);
-        self.meta.set_last_nmi(bus.nmi());
+        if nmi {
+            self.meta.set_nmi_pending(true);
+        }
         self.meta.set_rst_pending(bus.rst());
     }
 
