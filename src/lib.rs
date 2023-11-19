@@ -649,19 +649,17 @@ impl Cpu {
     }
 
     fn do_read(&mut self, sync: bool, poll: bool, addr: u16, bus: &mut impl Bus) -> u8 {
+        let mut halted = false;
+
         loop {
             if poll {
                 self.poll_interrupts(bus)
             };
             self.meta.set_last_nmi(bus.nmi());
-            bus.set_address(addr);
-            bus.set_sync(sync);
-            bus.set_read(true);
-            bus.set_halt(bus.not_ready());
-            bus.cycle(self);
-            let ready = !bus.not_ready();
-            if ready {
-                return bus.data();
+            let (data, not_ready) = bus.read(addr, sync, halted);
+            halted = not_ready;
+            if !halted {
+                return data;
             }
         }
     }
@@ -670,11 +668,7 @@ impl Cpu {
             self.poll_interrupts(bus);
         }
         self.meta.set_last_nmi(bus.nmi());
-        bus.set_halt(false);
-        bus.set_read(false);
-        bus.set_address(addr);
-        bus.set_data(val);
-        bus.cycle(self);
+        bus.write(addr, val);
     }
 
     fn push(&mut self, val: u8, bus: &mut impl Bus) {
@@ -953,17 +947,11 @@ impl Flags {
 }
 
 pub trait Bus {
-    fn data(&self) -> u8;
     fn rst(&self) -> bool;
     fn nmi(&self) -> bool;
     fn irq(&self) -> bool;
     fn not_ready(&self) -> bool;
 
-    fn set_data(&mut self, data: u8);
-    fn set_address(&mut self, addr: u16);
-    fn set_read(&mut self, read: bool);
-    fn set_sync(&mut self, sync: bool);
-    fn set_halt(&mut self, halt: bool);
-
-    fn cycle(&mut self, cpu: &Cpu);
+    fn read(&mut self, addr: u16, sync: bool, halt: bool) -> (u8, bool);
+    fn write(&mut self, addr: u16, data: u8);
 }
