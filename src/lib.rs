@@ -950,7 +950,6 @@ pub trait Bus {
     fn rst(&self) -> bool;
     fn nmi(&self) -> bool;
     fn irq(&self) -> bool;
-    fn not_ready(&self) -> bool;
 
     fn read(&mut self, addr: u16, sync: bool, halt: bool) -> (u8, bool);
     fn write(&mut self, addr: u16, data: u8);
